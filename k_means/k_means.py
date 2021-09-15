@@ -6,10 +6,10 @@ import pandas as pd
 
 class KMeans:
     
-    def __init__(self):
+    def __init__(self, n_clusters):
         # NOTE: Feel free add any hyperparameters 
         # (with defaults) as you see fit
-        pass
+        self.n_clusters = n_clusters
         
     def fit(self, X):
         """
@@ -19,8 +19,38 @@ class KMeans:
             X (array<m,n>): a matrix of floats with
                 m rows (#samples) and n columns (#features)
         """
-        # TODO: Implement
-        raise NotImplementedError()
+
+        # Initiate variables and random centroids
+        X_array = X.to_numpy()
+        m_samples, n_features = X_array.shape
+        centroids = np.zeros((self.n_clusters, n_features))
+        for i in range(self.n_clusters):
+            for j in range(n_features):
+                centroids[i][j] = np.random.uniform(low=np.amin(X_array[:,j]), high=np.amax(X_array[:,j]))
+        
+        # Iteratively update centroids until no more changes
+        assignments = np.zeros(m_samples)
+        prev_assignments = assignments
+        while assignments.all() != prev_assignments.all():
+            prev_assignments = assignments
+            euclidean_distances = cross_euclidean_distance(X_array, centroids)
+
+            # Assign points
+            for i, d in enumerate(euclidean_distances):
+                assignments[i] = np.min(d)
+            # Update centroids
+            centroids = np.zeros((self.n_clusters, n_features))
+            for i in range(self.n_clusters):
+                point_count = 0
+                for j in range(m_samples):
+                    if assignments[j] == i:
+                        centroids[i] += X_array[j]
+                        point_count += 1
+                centroids[i]/point_count
+
+        # Finally save centroids    
+        self.centroids = centroids
+        
     
     def predict(self, X):
         """
@@ -38,8 +68,14 @@ class KMeans:
             there are 3 clusters, then a possible assignment
             could be: array([2, 0, 0, 1, 2, 1, 1, 0, 2, 2])
         """
-        # TODO: Implement 
-        raise NotImplementedError()
+        X_array = X.to_numpy()
+        euclidean_distances = cross_euclidean_distance(X_array, self.centroids)
+        assignments = np.zeros(X_array.shape[0])
+        # Assign points
+        for i, d in enumerate(euclidean_distances):
+            assignments[i] = np.min(d)
+
+        return assignments
     
     def get_centroids(self):
         """
@@ -56,8 +92,7 @@ class KMeans:
             [xm_1, xm_2, ..., xm_n]
         ])
         """
-        # TODO: Implement 
-        raise NotImplementedError()
+        return self.centroids
     
     
     
