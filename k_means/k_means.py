@@ -20,37 +20,48 @@ class KMeans:
                 m rows (#samples) and n columns (#features)
         """
 
-        # Initiate variables and random centroids
-        X_array = X.to_numpy()
+        if isinstance(X, np.ndarray):
+            X_array = X
+        else:
+            X_array = X.to_numpy()
         m_samples, n_features = X_array.shape
-        centroids = np.zeros((self.n_clusters, n_features))
-        for i in range(self.n_clusters):
-            for j in range(n_features):
-                centroids[i][j] = np.random.uniform(low=np.amin(X_array[:,j]), high=np.amax(X_array[:,j]))
-        
-        # Iteratively update centroids until no more changes
-        assignments = np.zeros(m_samples, dtype=int)
-        prev_assignments = np.ones(m_samples, dtype=int)
-        while assignments.all() != prev_assignments.all():
-            prev_assignments = assignments
-            euclidean_distances = cross_euclidean_distance(X_array, centroids)
+        # Normalize data
+        for i in range(n_features):
+            X_min = np.amin(X_array[:,i])
+            X_max = np.amax(X_array[:,i])
+            for j in range(m_samples):
+                X_array[j][i] = (X_array[j][i] - X_min) / (X_max - X_min)
 
-            # Assign points
-            for i, d in enumerate(euclidean_distances):
-                assignments[i] = np.argmin(d)
-            # Update centroids
-            centroids = np.zeros((self.n_clusters, n_features))
-            for i in range(self.n_clusters):
-                point_count = 0
-                for j in range(m_samples):
-                    if assignments[j] == i:
-                        centroids[i] += X_array[j]
-                        point_count += 1
-                if point_count != 0:
-                    centroids[i] = centroids[i]/point_count
-            
-        # Finally save centroids
-        self.centroids = centroids
+        # Run algorithm with different initializations and choose lowest distortion
+        min_dist = np.inf
+        for i in range(100):
+            # Initialize random centroids
+            centroids = X_array[np.random.choice(len(X_array), self.n_clusters, replace=False)]
+
+            # Iteratively update centroids until no more changes
+            assignments = np.zeros(m_samples, dtype=int)
+            prev_assignments = np.ones(m_samples, dtype=int)
+            while assignments.all() != prev_assignments.all():
+                prev_assignments = assignments
+                euclidean_distances = cross_euclidean_distance(X_array, centroids)
+                distances_squared = euclidean_distances*euclidean_distances
+                # Assign points
+                for i, d in enumerate(distances_squared):
+                    assignments[i] = np.argmin(d)
+                # Update centroids
+                centroids = np.zeros((self.n_clusters, n_features))
+                for i in range(self.n_clusters):
+                    point_count = 0
+                    for j in range(m_samples):
+                        if assignments[j] == i:
+                            centroids[i] += X_array[j]
+                            point_count += 1
+                    if point_count != 0:
+                        centroids[i] = centroids[i]/point_count
+            dist = euclidean_distortion(X, assignments)
+            if min_dist > dist:
+                min_dist = dist
+                self.centroids = centroids
         
     
     def predict(self, X):
@@ -69,13 +80,22 @@ class KMeans:
             there are 3 clusters, then a possible assignment
             could be: array([2, 0, 0, 1, 2, 1, 1, 0, 2, 2])
         """
-        X_array = X.to_numpy()
-        print(self.centroids)
+        if isinstance(X, np.ndarray):
+            X_array = X
+        else:
+            X_array = X.to_numpy()
+        m_samples, n_features = X_array.shape
+        # Normalize data
+        for i in range(n_features):
+            X_min = np.amin(X_array[:,i])
+            X_max = np.amax(X_array[:,i])
+            for j in range(m_samples):
+                X_array[j][i] = (X_array[j][i] - X_min) / (X_max - X_min)
         euclidean_distances = cross_euclidean_distance(X_array, self.centroids)
-        #print(euclidean_distances)
+        distances_squared = euclidean_distances*euclidean_distances
         assignments = np.zeros(X_array.shape[0], dtype=int)
         # Assign points
-        for i, d in enumerate(euclidean_distances):
+        for i, d in enumerate(distances_squared):
             assignments[i] = np.argmin(d)
 
         return assignments
